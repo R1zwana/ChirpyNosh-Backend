@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
-import { listingService } from '../services';
+import { listingService, partnerService } from '../services';
+import { UnauthorizedError } from '../middleware/errorHandler';
 import { sendSuccess, sendCreated, sendNoContent, calculatePaginationMeta } from '../utils/apiResponse';
 import { CreateListingDto, UpdateListingDto } from '../validators/listing';
 import { PaginationParams } from '../types';
@@ -63,7 +64,19 @@ export async function create(
     next: NextFunction
 ): Promise<void> {
     try {
-        const listing = await listingService.createListing(req.body);
+        if (!req.user) {
+            throw new UnauthorizedError('Authentication required');
+        }
+
+        const partner = await partnerService.getPartnerByUserId(req.user.userId);
+        if (!partner) {
+            throw new UnauthorizedError('User is not a registered partner');
+        }
+
+        const listing = await listingService.createListing({
+            ...req.body,
+            partnerId: partner.id,
+        });
         sendCreated(res, listing, 'Listing created successfully');
     } catch (error) {
         next(error);

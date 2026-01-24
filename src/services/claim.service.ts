@@ -42,7 +42,7 @@ export async function getClaimsByListingId(listingId: string): Promise<Claim[]> 
 /**
  * Create a new claim
  */
-export async function createClaim(data: CreateClaimDto, userId?: string): Promise<Claim> {
+export async function createClaim(data: CreateClaimDto & { claimedBy: ClaimedBy; claimerName: string }, userId?: string): Promise<Claim> {
     // Check if listing exists
     const listing = await prisma.listing.findUnique({
         where: { id: data.listingId },
