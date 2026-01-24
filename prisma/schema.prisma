@@ -1,0 +1,191 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================================
+// ENUMS
+// ============================================================================
+
+enum UserRole {
+  ADMIN
+  PARTNER
+  RECIPIENT
+  PUBLIC
+}
+
+enum PartnerType {
+  Restaurant
+  Supermarket
+  Bakery
+  Hotel
+  Shop
+}
+
+enum ListingCategory {
+  Bakery
+  Produce
+  Meals
+  Dairy
+  Mixed
+}
+
+enum ListingType {
+  free
+  discounted
+}
+
+enum ClaimStatus {
+  claimed
+  picked_up
+  cancelled
+}
+
+enum ClaimedBy {
+  recipient
+  public
+}
+
+enum NotificationType {
+  claim_created
+  pickup_confirmed
+  claim_cancelled
+  pickup_reminder
+  expiration_urgent
+}
+
+// ============================================================================
+// MODELS
+// ============================================================================
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  name         String
+  role         UserRole @default(PUBLIC)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  partner   Partner?
+  recipient Recipient?
+  claims    Claim[]
+
+  @@map("users")
+}
+
+model Partner {
+  id        String      @id @default(cuid())
+  name      String
+  type      PartnerType
+  address   String
+  verified  Boolean     @default(false)
+  createdAt DateTime    @default(now()) @map("created_at")
+  updatedAt DateTime    @updatedAt @map("updated_at")
+
+  // Relations
+  userId   String    @unique @map("user_id")
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  listings Listing[]
+
+  @@index([type])
+  @@index([verified])
+  @@map("partners")
+}
+
+model Recipient {
+  id        String   @id @default(cuid())
+  orgName   String   @map("org_name")
+  address   String
+  capacity  Int
+  verified  Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  userId String @unique @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([verified])
+  @@map("recipients")
+}
+
+model Listing {
+  id              String          @id @default(cuid())
+  title           String
+  description     String
+  category        ListingCategory
+  listingType     ListingType     @map("listing_type")
+  quantity        Int
+  priceEur        Float?          @map("price_eur")
+  pickupWindows   String[]        @map("pickup_windows")
+  predictedWindow String?         @map("predicted_window")
+  imageUrl        String?         @map("image_url")
+  createdAt       DateTime        @default(now()) @map("created_at")
+  updatedAt       DateTime        @updatedAt @map("updated_at")
+
+  // Relations
+  partnerId String  @map("partner_id")
+  partner   Partner @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+  claims    Claim[]
+
+  @@index([partnerId])
+  @@index([category])
+  @@index([listingType])
+  @@index([createdAt(sort: Desc)])
+  @@map("listings")
+}
+
+model Claim {
+  id           String      @id @default(cuid())
+  claimedBy    ClaimedBy   @map("claimed_by")
+  claimerName  String      @map("claimer_name")
+  pickupWindow String      @map("pickup_window")
+  status       ClaimStatus @default(claimed)
+  createdAt    DateTime    @default(now()) @map("created_at")
+  updatedAt    DateTime    @updatedAt @map("updated_at")
+
+  // Relations
+  listingId String  @map("listing_id")
+  listing   Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  userId    String? @map("user_id")
+  user      User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([listingId])
+  @@index([status])
+  @@index([userId])
+  @@map("claims")
+}
+
+model ExpirationItem {
+  id        String   @id @default(cuid())
+  item      String
+  expiresOn DateTime @map("expires_on") @db.Date
+  notes     String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([expiresOn])
+  @@map("expiration_items")
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  type      NotificationType
+  title     String
+  message   String
+  read      Boolean          @default(false)
+  createdAt DateTime         @default(now()) @map("created_at")
+
+  @@index([read])
+  @@index([createdAt(sort: Desc)])
+  @@map("notifications")
+}
