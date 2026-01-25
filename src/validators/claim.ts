@@ -6,8 +6,8 @@ import { ClaimedBy, ClaimStatus } from '@prisma/client';
  */
 export const createClaimSchema = z.object({
     listingId: z.string().min(1, 'Listing ID is required'),
-    claimedBy: z.nativeEnum(ClaimedBy),
-    claimerName: z.string().min(2, 'Claimer name must be at least 2 characters').max(200, 'Name too long'),
+    claimedBy: z.nativeEnum(ClaimedBy).optional(),
+    claimerName: z.string().min(2, 'Claimer name must be at least 2 characters').max(200, 'Name too long').optional(),
     pickupWindow: z.string().min(1, 'Pickup window is required'),
 });
 

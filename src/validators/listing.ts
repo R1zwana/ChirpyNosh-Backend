@@ -13,7 +13,6 @@ export const createListingSchema = z.object({
     priceEur: z.number().positive('Price must be positive').optional(),
     pickupWindows: z.array(z.string()).min(1, 'At least one pickup window is required'),
     imageUrl: z.string().url('Invalid image URL').optional(),
-    partnerId: z.string().min(1, 'Partner ID is required'),
 });
 
 export type CreateListingDto = z.infer<typeof createListingSchema>;

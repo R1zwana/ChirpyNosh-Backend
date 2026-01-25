@@ -95,7 +95,7 @@ export async function getListingById(id: string): Promise<Listing> {
 /**
  * Create a new listing
  */
-export async function createListing(data: CreateListingDto): Promise<Listing> {
+export async function createListing(data: CreateListingDto & { partnerId: string }): Promise<Listing> {
     return prisma.listing.create({
         data: {
             title: data.title,

@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
-import { claimService } from '../services';
+import { claimService, recipientService } from '../services';
+import { BadRequestError } from '../middleware/errorHandler';
 import { sendSuccess, sendCreated } from '../utils/apiResponse';
 import { CreateClaimDto, UpdateClaimStatusDto } from '../validators/claim';
 
@@ -49,7 +50,30 @@ export async function create(
 ): Promise<void> {
     try {
         const userId = req.user?.userId;
-        const claim = await claimService.createClaim(req.body, userId);
+        let claimData = { ...req.body } as CreateClaimDto & { claimedBy: any; claimerName: string };
+
+        if (userId) {
+            // Authenticated user (Recipient)
+            const recipient = await recipientService.getRecipientByUserId(userId);
+            if (recipient) {
+                claimData.claimedBy = 'recipient';
+                claimData.claimerName = recipient.orgName;
+            } else {
+                // Authenticated but no recipient profile (e.g. Partner or raw User)
+                // Fallback to body or error? Let's error if body is missing fields.
+                if (!claimData.claimedBy || !claimData.claimerName) {
+                    throw new BadRequestError('Recipient profile required or claim details provided');
+                }
+            }
+        } else {
+            // Public user
+            if (!claimData.claimedBy || !claimData.claimerName) {
+                throw new BadRequestError('Claim details required for public claims');
+            }
+            claimData.claimedBy = 'public'; // Force public if not authed? Or trust enum?
+        }
+
+        const claim = await claimService.createClaim(claimData, userId);
         sendCreated(res, claim, 'Claim created successfully');
     } catch (error) {
         next(error);
