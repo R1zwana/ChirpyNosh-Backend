@@ -28,6 +28,15 @@ export function createApp(): Express {
     app.use(express.json({ limit: '10mb' }));
     app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
+    // Root route for convenience
+    app.get('/', (_req, res) => {
+        res.json({
+            message: 'Welcome to ChirpyNosh Backend API',
+            environment: env.NODE_ENV,
+            health_check: '/api/health',
+        });
+    });
+
     // API routes
     app.use('/api', routes);
 
